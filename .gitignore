@@ -1,0 +1,6 @@
+### Lazarus
+*.dbg
+
+## Build environment
+lib
+backup

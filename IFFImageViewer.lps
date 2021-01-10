@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <ProjectSession>
+    <PathDelim Value="\"/>
+    <Version Value="11"/>
+    <Units Count="5">
+      <Unit0>
+        <Filename Value="IFFImageViewer.lpr"/>
+        <IsPartOfProject Value="True"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="42" Y="34"/>
+        <UsageCount Value="151"/>
+      </Unit0>
+      <Unit1>
+        <Filename Value="frmmain.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="MainForm"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="204"/>
+        <CursorPos X="43" Y="225"/>
+        <UsageCount Value="151"/>
+      </Unit1>
+      <Unit2>
+        <Filename Value="dlg_aboutbox.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="AboutBox"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="11" Y="33"/>
+        <UsageCount Value="94"/>
+      </Unit2>
+      <Unit3>
+        <Filename Value="globalfunctions.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="GlobalFunctions"/>
+        <EditorIndex Value="-1"/>
+        <CursorPos X="5" Y="9"/>
+        <UsageCount Value="94"/>
+      </Unit3>
+      <Unit4>
+        <Filename Value="globalvars.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="GlobalVars"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="44"/>
+        <CursorPos X="3" Y="76"/>
+        <UsageCount Value="94"/>
+      </Unit4>
+    </Units>
+    <General>
+      <ActiveWindowIndexAtStart Value="-1"/>
+    </General>
+    <RunParams>
+      <FormatVersion Value="2"/>
+      <Modes Count="0" ActiveMode="default"/>
+    </RunParams>
+  </ProjectSession>
+</CONFIG>

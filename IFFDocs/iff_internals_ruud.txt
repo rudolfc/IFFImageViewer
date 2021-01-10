@@ -1,0 +1,79 @@
+
+
+Much info at:
+https://1fish2.github.io/IFF/
+
+
+
+
+typedef struct {
+ int16_t pad1;        /* 0 */
+ int16_t rate;        /* color cycle rate, 16384 = 60Hz */
+ int16_t active;      /* 0 = off, >0 = on */
+ uint8_t low;         /* lower... */
+ uint8_t high;        /* ...and upper color registers */
+} CRange;
+
+
+typedef struct {
+ struct {
+  uint8_t red;
+  uint8_t green;
+  uint8_t blue;
+ } colormap[chunk_size / 3];
+} ColorMap;
+
+
+typedef struct {
+ uint16_t w;                    /* raster width in pixels */
+ uint16_t h;                    /* raster height in pixels */
+ int16_t  x;                    /* x offset in pixels */
+ int16_t  y;                    /* y offset in pixels */
+ uint8_t  nplanes;              /* # source bitplanes */
+ uint8_t  masking;              /* masking technique, 0 = mskNone, 1 = mskHasMask, 2 = mskHasTransparentColor, 3 = mskLasso */
+ uint8_t  compression;          /* compression algoithm, 0 = cmpNone, 1 = cmpByteRun1 */
+ uint8_t  pad1;                 /* UNUSED.  For consistency, put 0 here. */
+ uint16_t transparentColor;     /* transparent "color number" */
+ uint8_t  xaspect;              /* aspect ratio, a rational number x/y */
+ uint8_t  yaspect;              /* aspect ratio, a rational number x/y */
+ int16_t  pagewidth;            /* source "page" size in pixels */
+ int16_t  pageheight;           /* source "page" size in pixels */
+} BitMapHeader;
+
+
+Ruud: hmm, below code is not entirely correct..
+
+uint32 PackBitsReadStream::read(void *dataPtr, uint32 dataSize) {
+	byte *out = (byte *)dataPtr;
+	uint32 left = dataSize;
+
+	uint32 lenR = 0, lenW = 0;
+	while (left > 0 && !_input->eos()) {
+		lenR = _input->readByte();
+
+		if (lenR == 128) {
+			// no-op
+			lenW = 0;
+		} else if (lenR <= 127) {
+			// literal run
+			lenR++;
+			lenW = MIN(lenR, left);
+			for (uint32 j = 0; j < lenW; j++) {
+				*out++ = _input->readByte();
+			}
+			for (; lenR > lenW; lenR--) {
+				_input->readByte();
+			}
+		} else {  // len > 128
+			// expand run
+			lenW = MIN((256 - lenR) + 1, left);
+			byte val = _input->readByte();
+			memset(out, val, lenW);
+			out += lenW;
+		}
+
+		left -= lenW;
+	}
+
+	return dataSize - left;
+}
