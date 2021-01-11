@@ -1,5 +1,6 @@
 ### Lazarus
 *.dbg
+*.exe
 
 ## Build environment
 lib
