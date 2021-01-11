@@ -436,8 +436,14 @@ begin
         begin
           (* skip through zero padding bytes *)
           PadBuffer[0] := 0;
-          While PadBuffer[0] = 0 do
+          While (PadBuffer[0] = 0) and not Eof(TF) do
             BlockRead(TF, PadBuffer, 1);
+          (* if no further items can exist in this file signal succesfull completion. *)
+          if FilePos(TF) >= (FileSize(TF) - SizeOf(TIffGenItemHeader)) then
+          begin
+            RPD.eof := True;
+            continue;
+          end;
           (* oops: last read byte was part of the next ItemHeader.. revert last read. *)
           Seek(TF, FilePos(TF) - 1);
           (* We already have all we need for bitmap data handling, just get the next one.. *)

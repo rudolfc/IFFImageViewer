@@ -18,10 +18,10 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <IsVisibleTab Value="True"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="1204"/>
-        <CursorPos Y="1238"/>
+        <TopLine Value="423"/>
+        <CursorPos X="86" Y="441"/>
         <UsageCount Value="153"/>
+        <Loaded Value="True"/>
       </Unit1>
       <Unit2>
         <Filename Value="dlg_aboutbox.pas"/>
@@ -45,15 +45,12 @@
         <Filename Value="globalvars.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="GlobalVars"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="44"/>
-        <CursorPos X="3" Y="76"/>
+        <EditorIndex Value="1"/>
+        <CursorPos X="3" Y="15"/>
         <UsageCount Value="96"/>
+        <Loaded Value="True"/>
       </Unit4>
     </Units>
-    <General>
-      <ActiveWindowIndexAtStart Value="-1"/>
-    </General>
     <RunParams>
       <FormatVersion Value="2"/>
       <Modes Count="0" ActiveMode="default"/>
