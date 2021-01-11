@@ -301,6 +301,7 @@ begin
 
         HBMode := False;
         ColorMap.nColors := 0;
+        ImgInputDatLen := 0;
         RPD := ReadPictureData(TF, BitMapHeader, HBMode, ImgTypeIlaced, ColorMap, ImgInputDatLen, True);
         if not RPD.OK then
         begin
@@ -518,7 +519,7 @@ begin
                 begin
                   MyBit :=
                     (BufOut[(Y*TargetWidth*BitMapHeader.nPlanes+Plane*TargetWidth+x) div 8] and ($01 shl (7-(x mod 8)))) shr (7-(x mod 8));
-                  Inc(Buffer32bit[y*TargetWidth+x+0], MyBit shl Plane);
+                  Inc(Buffer32bit[y*TargetWidth+x], MyBit shl Plane);
                 end;
                 (* Apply palette *)
                 Buffer32bit[y*TargetWidth+x] := ColorMapDecoded[Buffer32bit[y*TargetWidth+x]];
@@ -618,8 +619,7 @@ var
   IffGenItemHeader : TiffGenItemHeader;
   MyBMH            : TBitMapHeader;
   ImageType        : AnsiString;
-  TinyFound,
-  OldILaced        : Boolean;
+  TinyFound        : Boolean;
 begin
   Result.eof := False;
   Result.OK := False;
@@ -627,7 +627,6 @@ begin
   ImageType := 'BODY';
   if ReadTINY.Checked then ImageType := 'TINY';
   TinyFound := False;
-  OldILaced := ILaced;
   IffGenItemHeader.TypeID := 'xxxx';
   (* We have all we need to normal bitmap data, now just find it and load it (just skip the rest).. *)
   with IffGenItemHeader do
@@ -641,16 +640,34 @@ begin
         BlockRead(TF, PadBuffer, 4);
         if (PadBuffer[0]=Ord('P')) and (PadBuffer[1]=Ord('B')) and (PadBuffer[2]=Ord('M')) and (PadBuffer[3]=Ord(' ')) then
         begin
-          ILaced := False;
-          Continue;
+          if FreeBufOfs = 0 then
+          begin
+            (* First call during (multiple) image decoding *)
+            ILaced := False;
+            Continue;
+          end
+          else
+          begin
+            (* Secondary call during multiple image decoding: only continue on same image type as determined earlier *)
+            if not ILaced then Continue;
+          end;
         end;
         if (PadBuffer[0]=Ord('I')) and (PadBuffer[1]=Ord('L')) and (PadBuffer[2]=Ord('B')) and (PadBuffer[3]=Ord('M')) then
         begin
-          ILaced := True;
-          Continue;
+          if FreeBufOfs = 0 then
+          begin
+            (* First call during (multiple) image decoding *)
+            ILaced := True;
+            Continue;
+          end
+          else
+          begin
+            (* Secondary call during multiple image decoding: only continue on same image type as determined earlier *)
+            if ILaced then Continue;
+          end;
         end;
 
-        (* Force 'Completed successfully' status as we are done (with the IFF filepart) apparantly. *)
+        (* Force 'Completed successfully' status as we are done (with a/the IFF filepart). *)
         Result.OK := True;
         Result.eof := True;
         exit;
@@ -662,7 +679,7 @@ begin
          not CheckTypeID(TypeID[2]) or
          not CheckTypeID(TypeID[3]) then
       begin
-        (* Force 'Completed successfully' status as we are done (with the IFF filepart) apparantly. *)
+        (* Force 'Completed successfully' status as we are done (with a/the IFF filepart) apparantly. *)
         Result.OK := True;
         Result.eof := True;
         exit;
@@ -725,7 +742,6 @@ begin
             if Result.eof then
             begin
               (* The last FetchImage attempt was invalid *)
-              ILaced := OldILaced;
               exit;
             end;
           end
@@ -761,7 +777,6 @@ begin
     (* Force 'Completed successfully' status: we have no picture. *)
     Result.OK := True;
     Result.eof := True;
-    ILaced := OldILaced;
   end;
 end;
 
