@@ -488,7 +488,7 @@ begin
             end;
           end
           else
-            Move(Buffer, BufOut, Temp);
+            Move(Buffer, BufOut, ImgInputDatLen);
           (* process image 2 of 2.. (8bit+PAL -> 32bit color) *)
           TargetWidth  := BitMapHeader.W[0] shl 8 + BitMapHeader.W[1];
           TargetHeight := BitMapHeader.H[0] shl 8 + BitMapHeader.H[1];
