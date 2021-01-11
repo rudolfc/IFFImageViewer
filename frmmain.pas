@@ -160,7 +160,7 @@ var
 implementation
 
 uses
-  StrUtils, dlg_aboutbox;
+  dlg_aboutbox;
 
 {$R *.lfm}
 
@@ -326,6 +326,10 @@ begin
             S := S + 'I,'
           else
             S := S + 'P,';
+          if HBMode then
+            S := S + 'E,'
+          else
+            S := S + 'S,';
           S1 := IntToStr(TargetWidth);
           while Length(S1) < 3 do S1 := ' ' + S1;
           S := S + S1 + 'x';
@@ -379,6 +383,7 @@ procedure TMainForm.ShowFile(ImageOffset: integer);
 var
   LoadOK,
   HBMode,
+  HBExecd,
   ImgTypeIlaced    : boolean;
   BitMapHeader     : TBitMapHeader;
   ColorMap         : TColorMap;
@@ -426,6 +431,7 @@ begin
         RPD.OK := False;
         LastHeight := 0;
         HBMode := False;
+        HBExecd := False;
         ColorMap.nColors := 0;
         ImgTypeIlaced := False;
         while not RPD.eof do
@@ -463,6 +469,7 @@ begin
                 Colors[Count].Green := 0;
                 Colors[Count].Red   := 0;
               end;
+              HBExecd := True;
             end;
           (* decode ColorMap to something for easier access *)
           with ColorMap do
@@ -546,9 +553,13 @@ begin
           else
             S := 'Uncompressed ';
           if ImgTypeIlaced then
-            S := S + 'interlaced image; '
+            S := S + 'interlaced '
           else
-            S := S + 'progressive image; ';
+            S := S + 'progressive ';
+          if HBExecd then
+            S := S + 'EHB image; '
+          else
+            S := S + 'image; ';
           S := S + 'Size: ' + IntToStr(TargetWidth) + 'x' + IntToStr(TargetHeight) + '; ' +
                    'Offset: ' + IntToStr(TargetOffsetX) + 'x' + IntToStr(TargetOffsetY) + '; ' +
                    'PageSize: ' + IntToStr(TargetPWidth) + 'x' + IntToStr(TargetPHeight) + '; ' +
@@ -569,7 +580,10 @@ begin
         (* show bitmap *)
         Imain.Picture := nil;
         (* Calc aspect correction factor based on 5:6 as the norm *)
-        AspectCorr := (5 * BitMapHeader.YAspect) / (6 * BitMapHeader.XAspect);
+        AspectCorr := 1;
+        with BitMapHeader do
+          if (XAspect <> 0) and (YAspect <> 0) then
+            AspectCorr := (5 * YAspect) / (6 * XAspect);
         if DoAspectCorr.Checked then
           Imain.Canvas.StretchDraw(Rect(20,20,TargetWidth + 20, Round(TargetHeight*AspectCorr) + 20), IBitmap)
         else
