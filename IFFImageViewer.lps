@@ -9,7 +9,7 @@
         <IsPartOfProject Value="True"/>
         <EditorIndex Value="-1"/>
         <CursorPos X="42" Y="34"/>
-        <UsageCount Value="151"/>
+        <UsageCount Value="153"/>
       </Unit0>
       <Unit1>
         <Filename Value="frmmain.pas"/>
@@ -19,9 +19,9 @@
         <ResourceBaseClass Value="Form"/>
         <IsVisibleTab Value="True"/>
         <EditorIndex Value="-1"/>
-        <TopLine Value="474"/>
-        <CursorPos X="13" Y="490"/>
-        <UsageCount Value="151"/>
+        <TopLine Value="1204"/>
+        <CursorPos Y="1238"/>
+        <UsageCount Value="153"/>
       </Unit1>
       <Unit2>
         <Filename Value="dlg_aboutbox.pas"/>
@@ -31,7 +31,7 @@
         <ResourceBaseClass Value="Form"/>
         <EditorIndex Value="-1"/>
         <CursorPos X="11" Y="33"/>
-        <UsageCount Value="94"/>
+        <UsageCount Value="96"/>
       </Unit2>
       <Unit3>
         <Filename Value="globalfunctions.pas"/>
@@ -39,7 +39,7 @@
         <UnitName Value="GlobalFunctions"/>
         <EditorIndex Value="-1"/>
         <CursorPos X="5" Y="9"/>
-        <UsageCount Value="94"/>
+        <UsageCount Value="96"/>
       </Unit3>
       <Unit4>
         <Filename Value="globalvars.pas"/>
@@ -48,7 +48,7 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="44"/>
         <CursorPos X="3" Y="76"/>
-        <UsageCount Value="94"/>
+        <UsageCount Value="96"/>
       </Unit4>
     </Units>
     <General>

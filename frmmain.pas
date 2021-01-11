@@ -348,7 +348,7 @@ begin
           LBImages.Items.Add(S);
         end
         else
-          LBImages.Items.Add(s + '; Image has no Thumbnail');
+          LBImages.Items.Add(S + '; Image has no Thumbnail');
       end;
       IffPbmFileHeader.GfxID := 'xxxx';
     end;
@@ -391,7 +391,6 @@ var
   RawImg           : TRawImage;
   ImgFormDescript  : TRawImageDescription;
   ImgInputDatLen,
-  Temp,
   Count,
   Plane,
   x, y,
@@ -419,18 +418,17 @@ begin
     repeat
       try
         LoadOK := false;
-        ResetImgScale;
-        BitMapHeader := EmptyBMH;
         AssignFile(TF,LBFiles.Items[Index]);
         Reset(TF, 1);
         Seek(TF, ImageOffset);
+        ResetImgScale;
+        BitMapHeader := EmptyBMH;
 
         (* check for all image-parts in the file and fetch them all (assuming same image format and width!) *)
         ImgInputDatLen := 0;
         RPD.eof := False;
         RPD.OK := False;
         LastHeight := 0;
-        HBMode := False;
         HBExecd := False;
         ColorMap.nColors := 0;
         ImgTypeIlaced := False;
@@ -443,6 +441,7 @@ begin
           (* oops: last read byte was part of the next ItemHeader.. revert last read. *)
           Seek(TF, FilePos(TF) - 1);
           (* We already have all we need for bitmap data handling, just get the next one.. *)
+          HBMode := False;
           RPD := ReadPictureData(TF, BitMapHeader, HBMode, ImgTypeIlaced, ColorMap, ImgInputDatLen, False);
           if not RPD.OK then
           begin
@@ -544,10 +543,10 @@ begin
         LBStatus.Clear;
 
         (* Show some file-info if we have an image ('TINY' might turn-up empty!) *)
+        if ImageOffset <> 0 then
+          LBStatus.Items.Add('Image offset in file: ' + IntToStr(ImageOffset));
         if (TargetWidth <> 0) and (TargetHeight <> 0) then
         begin
-          if ImageOffset <> 0 then
-            LBStatus.Items.Add('Image offset in file: ' + IntToStr(ImageOffset));
           if BitMapHeader.Compression = 1 then
             S := 'Compressed '
           else
@@ -567,8 +566,10 @@ begin
                    'PALSize: ' + IntToStr(ColorMap.nColors) + '; ' +
                    'Aspect: ' + IntToStr(BitMapHeader.XAspect) + ':' + IntToStr(BitMapHeader.YAspect);
           LBStatus.Items.Add(S);
-          LBStatus.ItemIndex := LBStatus.Items.Count - 1;
-        end;
+        end
+        else
+          LBStatus.Items.Add('Image has no Thumbnail');
+        LBStatus.ItemIndex := LBStatus.Items.Count - 1;
 
         (* copy already processed total image to bitmap *)
         IBitmap := TBitmap.Create;
@@ -611,7 +612,8 @@ var
   IffGenItemHeader : TiffGenItemHeader;
   MyBMH            : TBitMapHeader;
   ImageType        : AnsiString;
-  TinyFound        : Boolean;
+  TinyFound,
+  OldILaced        : Boolean;
 begin
   Result.eof := False;
   Result.OK := False;
@@ -619,6 +621,7 @@ begin
   ImageType := 'BODY';
   if ReadTINY.Checked then ImageType := 'TINY';
   TinyFound := False;
+  OldILaced := ILaced;
   IffGenItemHeader.TypeID := 'xxxx';
   (* We have all we need to normal bitmap data, now just find it and load it (just skip the rest).. *)
   with IffGenItemHeader do
@@ -713,7 +716,12 @@ begin
           begin
             (* fetch the image *)
             Result := FetchImage(TF, BMH, MyBMH, FreeBufOfs, Temp);
-            if Result.eof then exit;
+            if Result.eof then
+            begin
+              (* The last FetchImage attempt was invalid *)
+              ILaced := OldILaced;
+              exit;
+            end;
           end
           else
           begin
@@ -744,12 +752,10 @@ begin
   (* Since a Thumbnail image is optional it's OK if we found none *)
   if (ImageType = 'TINY') and not TinyFound then
   begin
+    (* Force 'Completed successfully' status: we have no picture. *)
     Result.OK := True;
-    (* set zero size *)
-    BMH.W[0] := 0;
-    BMH.W[1] := 0;
-    BMH.H[0] := 0;
-    BMH.H[1] := 0;
+    Result.eof := True;
+    ILaced := OldILaced;
   end;
 end;
 
@@ -1229,6 +1235,8 @@ var
   OldIndex : Integer;
 begin
   OldIndex := LBImages.ItemIndex;
+  if LBFiles.Count <= 0 then exit;
+
   PrescanFile(LBFiles.ItemIndex);
   LBImages.ItemIndex := OldIndex;
 
