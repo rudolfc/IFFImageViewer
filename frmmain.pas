@@ -149,7 +149,9 @@ type
   end;
 
 const
-  maxfilesize = 1000000;
+  (* Let's support upto this (full-color) resolution approximately.
+     Note: Combining images in files might be vertically large.. *)
+  maxfilesize = 1024*1024*4;
 
 var
   MainForm: TMainForm;
@@ -393,6 +395,7 @@ var
   ImgFormDescript  : TRawImageDescription;
   ImgInputDatLen,
   Count,
+  InCount,
   Plane,
   x, y,
   TargetWidth,
@@ -404,7 +407,7 @@ var
   S                : String;
   RPD              : TReadPictDatResult;
   LastHeight       : Integer;
-  MyBit            : Byte;
+  MyBit            : LongWord;
   AspectCorr       : Double;
   TF               : File;
   Index            : Integer;
@@ -501,9 +504,22 @@ begin
           (* we decode / colormap convert all image(parts) on the fly since the 'local' colormap might change.. *)
           if not ImgTypeIlaced then
           begin
-            (* Progressive image: only apply palette *)
-            for Count := (TargetWidth * LastHeight) to (TargetWidth * TargetHeight) - 1 do
-              Buffer32bit[Count] := ColorMapDecoded[BufOut[Count]];
+            (* Progressive image: only apply palette.. *)
+            if ColorMap.nColors > 0 then
+            begin
+              for Count := (TargetWidth * LastHeight) to (TargetWidth * TargetHeight) - 1 do
+                Buffer32bit[Count] := ColorMapDecoded[BufOut[Count]]
+            end
+            else
+            begin
+              (* .. but if we have direct colors, just copy the image (assuming 24-bit color image). *)
+              InCount := TargetWidth * LastHeight * 3;
+              for Count := (TargetWidth * LastHeight) to (TargetWidth * TargetHeight) - 1 do
+              begin
+                Buffer32bit[Count] := BufOut[InCount] shl 24 + BufOut[InCount+1] shl 16 + BufOut[InCount+2];
+                Inc(InCount, 3);
+              end;
+            end;
           end
           else
           begin
@@ -521,8 +537,9 @@ begin
                     (BufOut[(Y*TargetWidth*BitMapHeader.nPlanes+Plane*TargetWidth+x) div 8] and ($01 shl (7-(x mod 8)))) shr (7-(x mod 8));
                   Inc(Buffer32bit[y*TargetWidth+x], MyBit shl Plane);
                 end;
-                (* Apply palette *)
-                Buffer32bit[y*TargetWidth+x] := ColorMapDecoded[Buffer32bit[y*TargetWidth+x]];
+                (* Apply palette unless we have a direct color image *)
+                if ColorMap.nColors > 0 then
+                  Buffer32bit[y*TargetWidth+x] := ColorMapDecoded[Buffer32bit[y*TargetWidth+x]];
               end;
             end;
           end;
@@ -590,7 +607,7 @@ begin
         (* Calc aspect correction factor based on 5:6 as the norm *)
         AspectCorr := 1;
         with BitMapHeader do
-          if (XAspect <> 0) and (YAspect <> 0) then
+          if (XAspect <> 0) and (YAspect <> 0) and not (XAspect = YAspect) then
             AspectCorr := (5 * YAspect) / (6 * XAspect);
         if DoAspectCorr.Checked then
           Imain.Canvas.StretchDraw(Rect(20,20,TargetWidth + 20, Round(TargetHeight*AspectCorr) + 20), IBitmap)
@@ -694,6 +711,16 @@ begin
         if Temp <> SizeOf(TBitMapHeader) then exit;
         (* Now read the actual bitmap info from the file *)
         BlockRead(TF,MyBMH,SizeOf(TBitMapHeader));
+        if FreeBufOfs <> 0 then
+        begin
+          (* Secondary call during multiple image decoding: only continue on same image type as determined earlier *)
+          if MyBMH.nPlanes = BMH.nPlanes then Continue;
+          (* Force 'Completed successfully' status as we are done (with a/the IFF filepart). *)
+          Result.OK := True;
+          Result.eof := True;
+          exit;
+        end;
+        (* First call during (multiple) image decoding: Always OK to continue. *)
         Continue;
       end;
       (* Read Amiga Display Mode *)
