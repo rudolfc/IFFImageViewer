@@ -967,13 +967,13 @@ begin
     else
       if LenR < 128 then (* literal run *)
       begin
-        if Left < 2 then break; (* fault condition *)
         Inc(LenR);
+        Dec(Left);
         LenW := Min(LenR, left);
         Move(Buffer[InPtr+1], BufOut[OutPtr], LenW);
         Inc(InPtr,LenW);
         Inc(OutPtr,LenW);
-        Dec(Left, LenW + 1);
+        Dec(Left, LenW);
       end
       else               (* expand run *)
       begin
@@ -1123,6 +1123,7 @@ begin
   ShowFile(-1);
   LBFiles.Items.Clear;
   LBImages.Items.Clear;
+  LBStatus.Items.Clear;
 end;
 
 procedure TMainForm.ADoubleSizeExecute(Sender: TObject);
