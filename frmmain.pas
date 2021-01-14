@@ -136,7 +136,7 @@ type
     procedure DoError(Msg: string; Args: array of const);
 
     function  ReadPictureData(
-      var TF: File; var BMH: TBitMapHeader; var HalfBriteMode, ILaced: Boolean;
+      var TF: File; var BMH: TBitMapHeader; var HalfBriteMode, HoldAndModMode, ILaced: Boolean;
       var ColorMap : TColorMap; var FreeBufOfs: Integer; PreScan: Boolean): TReadPictDatResult;
     Function  CheckTypeID(MyID: AnsiChar): Boolean;
     function  FetchImage(
@@ -232,6 +232,7 @@ end;
 procedure TMainForm.PrescanFile(Index: Integer);
 var
   HBMode,
+  HAMMode,
   FoundIt,
   ImgTypeIlaced    : Boolean;
   Count,
@@ -302,9 +303,10 @@ begin
         if IffPbmFileHeader.GfxID = 'ILBM' then ImgTypeIlaced := True;
 
         HBMode := False;
+        HAMMode := False;
         ColorMap.nColors := 0;
         ImgInputDatLen := 0;
-        RPD := ReadPictureData(TF, BitMapHeader, HBMode, ImgTypeIlaced, ColorMap, ImgInputDatLen, True);
+        RPD := ReadPictureData(TF, BitMapHeader, HBMode, HAMMode, ImgTypeIlaced, ColorMap, ImgInputDatLen, True);
         if not RPD.OK then
         begin
           LBImages.Items.Add('Error processing file, aborted.');
@@ -330,9 +332,12 @@ begin
           else
             S := S + 'P,';
           if HBMode then
-            S := S + 'E,'
+            S := S + 'EHB,'
           else
-            S := S + 'S,';
+            if HAMMode then
+              S := S + 'HAM,'
+            else
+              S := S + 'Std,';
           S1 := IntToStr(TargetWidth);
           while Length(S1) < 3 do S1 := ' ' + S1;
           S := S + S1 + 'x';
@@ -387,6 +392,7 @@ var
   LoadOK,
   HBMode,
   HBExecd,
+  HAMMode,
   ImgTypeIlaced    : boolean;
   BitMapHeader     : TBitMapHeader;
   ColorMap         : TColorMap;
@@ -403,14 +409,16 @@ var
   TargetOffsetX,
   TargetOffsetY,
   TargetPWidth,
-  TargetPHeight    : Integer;
+  TargetPHeight,
+  Index,
+  PALBits,
+  PALMask          : Integer;
   S                : String;
   RPD              : TReadPictDatResult;
   LastHeight       : Integer;
   MyBit            : LongWord;
   AspectCorr       : Double;
   TF               : File;
-  Index            : Integer;
 begin
   Index := LBFiles.ItemIndex;
   if Index = -1 then
@@ -452,7 +460,8 @@ begin
           Seek(TF, FilePos(TF) - 1);
           (* We already have all we need for bitmap data handling, just get the next one.. *)
           HBMode := False;
-          RPD := ReadPictureData(TF, BitMapHeader, HBMode, ImgTypeIlaced, ColorMap, ImgInputDatLen, False);
+          HAMMode := False;
+          RPD := ReadPictureData(TF, BitMapHeader, HBMode, HAMMode, ImgTypeIlaced, ColorMap, ImgInputDatLen, False);
           if not RPD.OK then
           begin
             CloseFile(TF);
@@ -500,6 +509,11 @@ begin
             Move(Buffer, BufOut, ImgInputDatLen);
           (* process image 2 of 2.. (8bit+PAL -> 32bit color) *)
           TargetWidth  := BitMapHeader.W[0] shl 8 + BitMapHeader.W[1];
+          if HAMMode and (ColorMap.nColors = 64) then
+          begin
+            (* Workaround: HAM8 apparantly contains faulty info here, use PageWidth instead. *)
+            TargetWidth  := BitMapHeader.PageWidth[0] shl 8 + BitMapHeader.PageWidth[1];
+          end;
           TargetHeight := BitMapHeader.H[0] shl 8 + BitMapHeader.H[1];
           (* we decode / colormap convert all image(parts) on the fly since the 'local' colormap might change.. *)
           if not ImgTypeIlaced then
@@ -507,8 +521,9 @@ begin
             (* Progressive image: only apply palette.. *)
             if ColorMap.nColors > 0 then
             begin
+              //fixme: We should implement PBM-HAM decoding here. Non-HAM:
               for Count := (TargetWidth * LastHeight) to (TargetWidth * TargetHeight) - 1 do
-                Buffer32bit[Count] := ColorMapDecoded[BufOut[Count]]
+                Buffer32bit[Count] := ColorMapDecoded[BufOut[Count]];
             end
             else
             begin
@@ -539,7 +554,52 @@ begin
                 end;
                 (* Apply palette unless we have a direct color image *)
                 if ColorMap.nColors > 0 then
-                  Buffer32bit[y*TargetWidth+x] := ColorMapDecoded[Buffer32bit[y*TargetWidth+x]];
+                begin
+                  if HAMMode then
+                  begin
+                    (* Preset HAM6 Image properties *)
+                    PALBits := 4;
+                    PALMask := $0f;
+                    if ColorMap.nColors = 64 then
+                    begin
+                      (* Set HAM8 Image properties *)
+                      PALBits := 6;
+                      PALMask := $3f;
+                    end;
+                    (* Fetch color from Palette *)
+                    if (Buffer32bit[y*TargetWidth+x] and ($03 shl PALBits)) = 0 then
+                    begin
+                      Buffer32bit[y*TargetWidth+x] := ColorMapDecoded[Buffer32bit[y*TargetWidth+x]];
+                      continue;
+                    end;
+                    (* Modify Blue *)
+                    if (Buffer32bit[y*TargetWidth+x] and ($03 shl PALBits)) = (LongWord($01) shl PALBits) then
+                    begin
+                      Buffer32bit[y*TargetWidth+x] := (Buffer32bit[y*TargetWidth+x-1] and $0000ffff) or
+                                                      (Buffer32bit[y*TargetWidth+x] and PALMask) shl (24-PALBits);
+                      continue;
+                    end;
+                    (* Modify Red *)
+                    if (Buffer32bit[y*TargetWidth+x] and ($03 shl PALBits)) = (LongWord($02) shl PALBits) then
+                    begin
+                      Buffer32bit[y*TargetWidth+x] := (Buffer32bit[y*TargetWidth+x-1] and $00ffff00) or
+                                                      (Buffer32bit[y*TargetWidth+x] and PALMask) shl (8-PALBits);
+                      continue;
+                    end;
+                    (* Modify Green *)
+                    if (Buffer32bit[y*TargetWidth+x] and ($03 shl PALBits)) = (LongWord($03) shl PALBits) then
+                    begin
+                       Buffer32bit[y*TargetWidth+x] := (Buffer32bit[y*TargetWidth+x-1] and $00ff00ff) or
+                                                       (Buffer32bit[y*TargetWidth+x] and PALMask) shl (16-PALBits);
+                       continue;
+                    end;
+                  end
+                  else
+                  begin
+                    (* Just normally apply the Palette *)
+                    Buffer32bit[y*TargetWidth+x] := ColorMapDecoded[Buffer32bit[y*TargetWidth+x]];
+                  end;
+                end;
               end;
             end;
           end;
@@ -558,8 +618,6 @@ begin
         CloseFile(TF);
 
         (* Show extended file-info *)
-        TargetWidth   := BitMapHeader.W[0] shl 8 + BitMapHeader.W[1];
-        TargetHeight  := BitMapHeader.H[0] shl 8 + BitMapHeader.H[1];
         TargetOffsetX := BitMapHeader.X[0] shl 8 + BitMapHeader.X[1];
         TargetOffsetY := BitMapHeader.Y[0] shl 8 + BitMapHeader.Y[1];
         TargetPWidth  := BitMapHeader.PageWidth[0] shl 8 + BitMapHeader.PageWidth[1];
@@ -582,7 +640,10 @@ begin
           if HBExecd then
             S := S + 'EHB image; '
           else
-            S := S + 'image; ';
+            if HAMMode then
+              S := S + 'HAM image; '
+            else
+              S := S + 'image; ';
           S := S + 'Size: ' + IntToStr(TargetWidth) + 'x' + IntToStr(TargetHeight) + '; ' +
                    'Offset: ' + IntToStr(TargetOffsetX) + 'x' + IntToStr(TargetOffsetY) + '; ' +
                    'PageSize: ' + IntToStr(TargetPWidth) + 'x' + IntToStr(TargetPHeight) + '; ' +
@@ -608,9 +669,23 @@ begin
         AspectCorr := 1;
         with BitMapHeader do
           if (XAspect <> 0) and (YAspect <> 0) and not (XAspect = YAspect) then
+          begin
             AspectCorr := (5 * YAspect) / (6 * XAspect);
+            if HAMMode then
+            begin
+              (* HAMx works in mysterious ways.. *)
+              AspectCorr := YAspect / XAspect;
+            end;
+          end;
+
         if DoAspectCorr.Checked then
-          Imain.Canvas.StretchDraw(Rect(20,20,TargetWidth + 20, Round(TargetHeight*AspectCorr) + 20), IBitmap)
+        begin
+          (* Always scale-up since we otherwise lose pixels (scaling method is drop/copy because of it's high speed) *)
+          if AspectCorr >= 1 then
+            Imain.Canvas.StretchDraw(Rect(20,20,TargetWidth + 20, Round(TargetHeight*AspectCorr) + 20), IBitmap)
+          else
+            Imain.Canvas.StretchDraw(Rect(20,20,Round(TargetWidth/AspectCorr) + 20, TargetHeight + 20), IBitmap);
+        end
         else
           Imain.Canvas.Draw(20,20,IBitmap);
 
@@ -629,7 +704,7 @@ begin
 end;
 
 function TMainForm.ReadPictureData(
-  var TF: File; var BMH: TBitMapHeader; var HalfBriteMode, ILaced: Boolean;
+  var TF: File; var BMH: TBitMapHeader; var HalfBriteMode, HoldAndModMode, ILaced: Boolean;
   var ColorMap : TColorMap; var FreeBufOfs: Integer; PreScan: Boolean): TReadPictDatResult;
 var
   Temp             : LongWord;
@@ -732,10 +807,26 @@ begin
         (* Now read the actual viewportMode info from the file *)
         BlockRead(TF,PadBuffer,SizeOf(LongWord));
         (* From the table listed on the site it shows that if bit7 = 1 we are in some HALFBRITE mode *)
-        if (PadBuffer[3] and $80) = 0 then
-          HalfBriteMode := False
-        else
+        if (PadBuffer[3] and $80) = $80 then
+        begin
           HalfBriteMode := True;
+          Continue;
+        end;
+        HalfBriteMode := False;
+        if (PadBuffer[2] and $08) = $08 then
+          HoldAndModMode := True
+        else
+          HoldAndModMode := False;
+
+        //fixme: We don't support PBM-HAM images yet.
+        if HoldAndModMode and not ILaced then
+        begin
+          (* Force 'Completed successfully' status as we are done (with a/the IFF filepart). *)
+          Result.OK := True;
+          Result.eof := True;
+          exit;
+        end;
+
         Continue;
       end;
       (* Read ColorPalette *)
