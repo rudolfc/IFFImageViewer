@@ -376,7 +376,7 @@ var
   ConvErr,
   Offset   : Integer;
 begin
-  Result := 0;
+  Result := -1;
   while AnsiPos('@', PicProps) <> 0 do
     Delete(PicProps, 1, 1);
   while AnsiPos(';', PicProps) <> 0 do

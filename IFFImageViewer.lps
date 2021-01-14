@@ -19,8 +19,8 @@
         <ResourceBaseClass Value="Form"/>
         <IsVisibleTab Value="True"/>
         <EditorIndex Value="-1"/>
-        <TopLine Value="480"/>
-        <CursorPos Y="500"/>
+        <TopLine Value="373"/>
+        <CursorPos X="20" Y="379"/>
         <UsageCount Value="167"/>
       </Unit1>
       <Unit2>
