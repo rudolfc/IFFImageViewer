@@ -521,7 +521,7 @@ begin
             (* Progressive image: only apply palette.. *)
             if ColorMap.nColors > 0 then
             begin
-              //fixme: We should implement PBM-HAM decoding here. Non-HAM:
+              (* Note: PBM-HAM images should be handled seperate, would they exist, but Amiga hardware doesn't support this. *)
               for Count := (TargetWidth * LastHeight) to (TargetWidth * TargetHeight) - 1 do
                 Buffer32bit[Count] := ColorMapDecoded[BufOut[Count]];
             end
@@ -818,7 +818,6 @@ begin
         else
           HoldAndModMode := False;
 
-        //fixme: We don't support PBM-HAM images yet.
         if HoldAndModMode and not ILaced then
         begin
           (* Force 'Completed successfully' status as we are done (with a/the IFF filepart). *)
