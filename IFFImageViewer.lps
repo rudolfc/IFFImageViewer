@@ -7,8 +7,8 @@
       <Unit0>
         <Filename Value="IFFImageViewer.lpr"/>
         <IsPartOfProject Value="True"/>
-        <IsVisibleTab Value="True"/>
         <EditorIndex Value="-1"/>
+        <WindowIndex Value="-1"/>
         <CursorPos Y="36"/>
         <UsageCount Value="168"/>
       </Unit0>
@@ -29,6 +29,7 @@
         <ComponentName Value="AboutBox"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
+        <IsVisibleTab Value="True"/>
         <EditorIndex Value="-1"/>
         <CursorPos X="11" Y="33"/>
         <UsageCount Value="111"/>

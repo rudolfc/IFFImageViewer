@@ -396,7 +396,7 @@ var
   ImgTypeIlaced    : boolean;
   BitMapHeader     : TBitMapHeader;
   ColorMap         : TColorMap;
-  ColorMapDecoded  : array[0..767] of LongWord;
+  ColorMapDecoded  : array[0..255] of LongWord;
   RawImg           : TRawImage;
   ImgFormDescript  : TRawImageDescription;
   ImgInputDatLen,
@@ -491,7 +491,7 @@ begin
             end;
           (* decode ColorMap to something for easier access *)
           with ColorMap do
-            for Count := 0 to 767 do
+            for Count := 0 to 255 do
               ColorMapDecoded[Count] := Colors[Count].Blue shl 16 + Colors[Count].Green shl 8 + Colors[Count].Red;
           (* process image 1 of 2.. (copy or decode) *)
           if BitMapHeader.Compression = 1 then
